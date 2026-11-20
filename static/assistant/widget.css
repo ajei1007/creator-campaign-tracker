@@ -1,0 +1,25 @@
+#field-help-toggle {
+  position: fixed; bottom: 22px; right: 22px; z-index: 1000;
+  width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer;
+  background: #6366f1; color: #fff; font-size: 1.5rem; font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0,0,0,.25);
+}
+#field-help-panel {
+  position: fixed; bottom: 86px; right: 22px; z-index: 1000;
+  width: 340px; max-width: calc(100vw - 44px); background: #fff; color: #1f2937;
+  border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.3);
+  display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb;
+}
+#field-help-head {
+  background: #4f46e5; color: #fff; padding: .7rem 1rem; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+}
+#field-help-head button { background: none; border: 0; color: #fff; font-size: 1.2rem; cursor: pointer; }
+#field-help-log { padding: 1rem; max-height: 320px; overflow-y: auto; font-size: .88rem; line-height: 1.5; }
+#field-help-log p { margin: 0 0 .7rem; padding: .55rem .7rem; border-radius: 9px; }
+.fh-bot { background: #eef2ff; }
+.fh-user { background: #f3f4f6; text-align: right; }
+.fh-err { background: #fee2e2; color: #991b1b; }
+#field-help-form { display: flex; border-top: 1px solid #e5e7eb; }
+#field-help-input { flex: 1; border: 0; padding: .7rem; font-size: .9rem; outline: none; }
+#field-help-form button { border: 0; background: #6366f1; color: #fff; padding: 0 1rem; cursor: pointer; }

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>No creator profile</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh;
+           margin: 0; background: #f8fafc; color: #334155; text-align: center; }
+    a { color: #4f46e5; }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>No creator profile linked</h1>
+    <p>This login isn't connected to a creator yet. Ask an admin to link it.</p>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+      <button>Sign out</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Creator Campaign Admin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0;
+           display: grid; place-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #1e293b; padding: 2rem 2.25rem; border-radius: 12px; width: 320px;
+            box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+    h1 { font-size: 1.25rem; margin: 0 0 1.25rem; }
+    label { display: block; font-size: .8rem; margin: .75rem 0 .25rem; color: #94a3b8; }
+    input { width: 100%; padding: .6rem .7rem; border-radius: 7px; border: 1px solid #334155;
+            background: #0f172a; color: #e2e8f0; box-sizing: border-box; }
+    button { width: 100%; margin-top: 1.25rem; padding: .65rem; border: 0; border-radius: 7px;
+             background: #6366f1; color: white; font-weight: 600; cursor: pointer; }
+    .err { background: #7f1d1d; padding: .5rem .7rem; border-radius: 7px; font-size: .85rem; margin-top: 1rem; }
+    .hint { font-size: .75rem; color: #64748b; margin-top: 1.25rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h1>Creator Campaign Admin</h1>
+    {% if form.errors %}<div class="err">Wrong username or password.</div>{% endif %}
+    <label for="id_username">Username</label>
+    {{ form.username }}
+    <label for="id_password">Password</label>
+    {{ form.password }}
+    <button type="submit">Sign in</button>
+    <input type="hidden" name="next" value="{{ next }}">
+    <p class="hint">Demo: admin_demo / manager_demo / reviewer_demo<br>password: demo-pass-1234</p>
+  </form>
+</body>
+</html>

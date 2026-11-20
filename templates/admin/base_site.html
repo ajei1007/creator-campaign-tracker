@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'assistant/widget.css' %}">
+{% endblock %}
+
+{% block footer %}{{ block.super }}
+<div id="field-help" aria-live="polite">
+  <button id="field-help-toggle" type="button" title="Ask about these fields">?</button>
+  <div id="field-help-panel" hidden>
+    <div id="field-help-head">
+      <span>Field help</span>
+      <button id="field-help-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div id="field-help-log">
+      <p class="fh-bot">Ask me what a field means or how to fill it out — for example
+        "what does committed spend mean?"</p>
+    </div>
+    <form id="field-help-form">
+      <input id="field-help-input" type="text" maxlength="500" autocomplete="off"
+             placeholder="Ask about a field…">
+      <button type="submit">Send</button>
+    </form>
+  </div>
+</div>
+<script src="{% static 'assistant/widget.js' %}"></script>
+{% endblock %}
