@@ -196,6 +196,15 @@ class ParticipationAdmin(admin.ModelAdmin):
             ro += ["agreed_fee"]
         return ro
 
+    def formfield_for_choice_field(self, db_field, request, **kwargs):
+        # Reviewers triage bookings but can't pay: drop "Paid" from the choices
+        # they can pick so the edit form can't do what the action won't.
+        if db_field.name == "status" and not request.user.can_manage_payments:
+            kwargs["choices"] = [
+                c for c in Participation.Status.choices if c[0] != Participation.Status.PAID
+            ]
+        return super().formfield_for_choice_field(db_field, request, **kwargs)
+
     def has_add_permission(self, request):
         return request.user.is_superuser or request.user.is_manager
 

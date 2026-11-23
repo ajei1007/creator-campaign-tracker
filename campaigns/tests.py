@@ -1,11 +1,17 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.utils import timezone
 
+from accounts.models import Role
+from .admin import ParticipationAdmin
 from .models import Campaign, Creator, Participation, SocialAccount
+
+User = get_user_model()
 
 
 def make_campaign(**kwargs):
@@ -145,6 +151,30 @@ class BudgetAndCapacityTests(TestCase):
             status=Participation.Status.PAID, agreed_fee=Decimal("150"),
         )
         self.assertEqual(self.campaign.budget_remaining, Decimal("350"))
+
+
+class ReviewerPaymentGateTests(TestCase):
+    def setUp(self):
+        self.admin = ParticipationAdmin(Participation, AdminSite())
+        self.factory = RequestFactory()
+
+    def _status_choices_for(self, role):
+        user = User.objects.create_user(f"{role}_u", password="x", role=role)
+        request = self.factory.get("/")
+        request.user = user
+        field = self.admin.formfield_for_choice_field(
+            Participation._meta.get_field("status"), request
+        )
+        return [c[0] for c in field.choices]
+
+    def test_reviewer_cannot_select_paid(self):
+        choices = self._status_choices_for(Role.REVIEWER)
+        self.assertNotIn(Participation.Status.PAID, choices)
+        self.assertIn(Participation.Status.APPROVED, choices)
+
+    def test_manager_can_select_paid(self):
+        choices = self._status_choices_for(Role.MANAGER)
+        self.assertIn(Participation.Status.PAID, choices)
 
 
 class CampaignValidationTests(TestCase):
