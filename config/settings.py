@@ -161,7 +161,7 @@ ALLOWED_DOC_EXTENSIONS = ["pdf", "png", "jpg", "jpeg"]
 
 # AI assistant
 GROQ_API_KEY = env("GROQ_API_KEY", default="")
-GROQ_MODEL = env("GROQ_MODEL", default="llama-3.3-70b-versatile")
+GROQ_MODEL = env("GROQ_MODEL", default="openai/gpt-oss-20b")
 GROQ_BASE_URL = env("GROQ_BASE_URL", default="https://api.groq.com/openai/v1")
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
