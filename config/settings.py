@@ -126,6 +126,9 @@ if USE_S3:
     AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default=None)
     AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="auto")
     AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default=None) or None
+    # Neon Object Storage (and some other S3 clones) only speak path-style.
+    AWS_S3_ADDRESSING_STYLE = env("AWS_S3_ADDRESSING_STYLE", default="auto")
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = not bool(AWS_S3_CUSTOM_DOMAIN)
