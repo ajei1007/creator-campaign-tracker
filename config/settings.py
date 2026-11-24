@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -140,6 +141,20 @@ else:
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+# In production we never want to silently run on the dev SQLite file or the
+# local disk; fail loudly if the managed services weren't wired up.
+if not DEBUG:
+    if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+        raise ImproperlyConfigured(
+            "DATABASE_URL must point at the managed Postgres when DEBUG is off; "
+            "refusing to fall back to the local SQLite file."
+        )
+    if not USE_S3:
+        raise ImproperlyConfigured(
+            "USE_S3 must be enabled with object-storage credentials when DEBUG "
+            "is off; refusing to store uploads on local disk."
+        )
 
 # Security hardening applied only when DEBUG is off (i.e. in production).
 if not DEBUG:
