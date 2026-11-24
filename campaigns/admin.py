@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Sum
+from django.db.models import Sum
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -37,9 +37,15 @@ class CreatorAdmin(admin.ModelAdmin):
     readonly_fields = ("avatar_tag", "created_at")
     autocomplete_fields = ("portal_user",)
 
-    @admin.display(description="Followers", ordering="display_name")
+    def get_queryset(self, request):
+        # Annotate so the Followers column sorts correctly and skips a per-row query.
+        return super().get_queryset(request).annotate(
+            _total_followers=Sum("social_accounts__followers")
+        )
+
+    @admin.display(description="Followers", ordering="_total_followers")
     def total_followers_display(self, obj):
-        return f"{obj.total_followers:,}"
+        return f"{obj._total_followers or 0:,}"
 
     @admin.display(description="Avatar")
     def avatar_tag(self, obj):
@@ -79,10 +85,6 @@ class CampaignAdmin(admin.ModelAdmin):
         ("Meta", {"fields": ("created_at",)}),
     )
     actions = ["activate_campaigns", "mark_completed"]
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.annotate(_pcount=Count("participations"))
 
     @admin.display(description="Committed")
     def committed_display(self, obj):

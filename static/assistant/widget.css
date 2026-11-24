@@ -10,6 +10,7 @@
   border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.3);
   display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb;
 }
+#field-help-panel[hidden] { display: none; }
 #field-help-head {
   background: #4f46e5; color: #fff; padding: .7rem 1rem; font-weight: 600;
   display: flex; justify-content: space-between; align-items: center;
