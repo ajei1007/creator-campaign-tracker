@@ -6,8 +6,10 @@ invite to payout, and stays inside a fixed budget and creator cap. Built on
 Django's admin, backed by managed Postgres and S3-compatible object storage,
 with a Groq-powered help assistant embedded in the admin.
 
-- **Live URL:** _<fill in after deploy>_ — `/admin/` for staff, `/accounts/login/` for everyone
+- **Live URL:** https://creator-campaign-admin.onrender.com — `/admin/` for staff, `/accounts/login/` for everyone
 - **Demo logins** (seeded): `admin_demo`, `manager_demo`, `reviewer_demo` — password `demo-pass-1234`
+
+> Hosted on Render's free tier, so the first request after an idle period cold-starts (~50s). Database is Neon Postgres; uploads go to Neon Object Storage; the assistant runs on Groq.
 
 ## Why this domain
 
@@ -36,8 +38,10 @@ The four models:
 - **PostgreSQL on a managed host (Neon).** Relational data with real foreign
   keys and aggregate queries (budget sums, follower totals). SQLite is used for
   local dev only; production uses `DATABASE_URL` and never falls back to a file.
-- **Cloudflare R2 for object storage** via `django-storages` — S3-compatible,
-  zero-egress-fee free tier. Swapping providers is one endpoint env var.
+- **Neon Object Storage for uploads** via `django-storages` — S3-compatible and
+  on the same Neon account as the database, so one provider covers both. The
+  backend is plain S3, so switching to R2/S3/Supabase is just env vars
+  (`AWS_S3_ENDPOINT_URL`, `AWS_S3_ADDRESSING_STYLE`).
 - **WhiteNoise** for hashed, compressed static files, so no separate CDN is
   needed for the admin's CSS/JS.
 - **Groq** for the assistant — free tier, OpenAI-compatible, fast. The client is
@@ -120,18 +124,24 @@ the assistant locally, put a free Groq key in `.env` as `GROQ_API_KEY`.
 Reset the data at any time with `python manage.py seed` (add `--creators N
 --campaigns N` to change the scale).
 
-## Deployment (Render + Neon + Cloudflare R2)
+## Deployment (Render + Neon database + Neon Object Storage)
 
-1. Create a Neon Postgres database; copy its `DATABASE_URL`.
-2. Create a Cloudflare R2 bucket and an S3 API token.
-3. On Render, create a web service from this repo (`render.yaml` is included).
-   Set `DEBUG=False`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `DATABASE_URL`,
-   the `USE_S3` + `AWS_*` storage vars, and `GROQ_API_KEY`.
-4. `build.sh` runs `collectstatic` and `migrate`. Run `python manage.py seed`
-   once from the Render shell to create demo data and logins.
+The repo deploys as a Render Blueprint (`render.yaml`).
 
-Static files are served by WhiteNoise; uploads go straight to R2, never to the
-instance disk.
+1. Create a Neon project. Use its pooled `DATABASE_URL`, and in the same project
+   enable **Object Storage**, create a public-read bucket, and generate an S3
+   credential (`storage:write`).
+2. On Render: **New → Blueprint**, point at this repo. Render reads `render.yaml`
+   and prompts for the secret env vars: `DATABASE_URL`, the `AWS_*` storage
+   values, `AWS_S3_CUSTOM_DOMAIN` (`<endpoint-host>/<bucket>`), `GROQ_API_KEY`,
+   and the host in `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS`. `DEBUG=False`,
+   `USE_S3=True`, region, and path-style addressing are set by the blueprint.
+3. `build.sh` runs `collectstatic` and `migrate`. Seed once with
+   `python manage.py seed` (locally against the Neon `DATABASE_URL`, or from a
+   Render shell) to create the demo data and logins.
+
+Static files are served by WhiteNoise; uploads go straight to Neon Object
+Storage (path-style S3), never to the instance disk.
 
 ## What I deliberately skipped, and why
 
