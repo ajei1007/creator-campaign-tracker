@@ -154,7 +154,7 @@ class CampaignAdmin(admin.ModelAdmin):
 @admin.register(Participation)
 class ParticipationAdmin(admin.ModelAdmin):
     list_display = ("creator", "campaign", "status", "agreed_fee", "submitted_at", "paid_at")
-    list_filter = ("status", "campaign__brand", "campaign")
+    list_filter = ("status", "campaign__brand")
     search_fields = ("creator__display_name", "campaign__name")
     autocomplete_fields = ("creator", "campaign")
     readonly_fields = ("submitted_at", "approved_at", "paid_at", "invited_at")

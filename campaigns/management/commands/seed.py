@@ -25,6 +25,13 @@ User = get_user_model()
 
 DEMO_PASSWORD = "demo-pass-1234"
 
+# A curated set of target markets rather than Faker's full country list, so the
+# admin's country filter stays a short, usable dropdown instead of 50+ rows.
+COUNTRIES = [
+    "United States", "United Kingdom", "Canada", "Germany", "France",
+    "Brazil", "India", "Australia", "Japan", "Mexico",
+]
+
 
 class Command(BaseCommand):
     help = "Reset and reseed the database with realistic demo data."
@@ -86,7 +93,7 @@ class Command(BaseCommand):
             creator = Creator.objects.create(
                 display_name=name,
                 email=fake.unique.email(),
-                country=fake.country(),
+                country=random.choice(COUNTRIES),
                 niche=random.choice(niches),
                 bio=fake.sentence(nb_words=16),
             )
