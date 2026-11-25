@@ -3,6 +3,15 @@
 
 {% block extrahead %}{{ block.super }}
 <link rel="stylesheet" href="{% static 'assistant/widget.css' %}">
+<style>
+  #changelist-filter .filter-select {
+    width: 100%; margin: 4px 0 10px; padding: 6px 8px;
+    border: 1px solid var(--border-color, #ccc); border-radius: 6px;
+    background: var(--body-bg, #fff); color: var(--body-fg, #333);
+    font-size: 13px; cursor: pointer;
+  }
+  #changelist-filter summary { font-weight: 600; cursor: pointer; }
+</style>
 {% endblock %}
 
 {% block footer %}{{ block.super }}
