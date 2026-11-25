@@ -59,7 +59,7 @@ class StatusTransitionTests(TestCase):
 
     def test_legal_transition_passes(self):
         p = self._p(Participation.Status.ACCEPTED)
-        p.full_clean(exclude=["campaign", "creator"])  # should not raise
+        p.full_clean(exclude=["campaign", "creator"])
 
     def test_illegal_skip_is_rejected(self):
         p = self._p(Participation.Status.PAID)

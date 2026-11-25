@@ -4,12 +4,7 @@ from django.shortcuts import redirect, render
 
 @login_required
 def home(request):
-    """Entry page after login.
-
-    Staff are sent to the admin. A creator with a linked login sees a read-only
-    summary of their own campaigns and earnings, which is all the self-service
-    portal needs to be for this task.
-    """
+    # Staff go to the admin; a linked creator sees their own campaigns.
     user = request.user
     if user.is_staff:
         return redirect("admin:index")

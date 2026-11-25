@@ -38,7 +38,7 @@ class CreatorAdmin(admin.ModelAdmin):
     autocomplete_fields = ("portal_user",)
 
     def get_queryset(self, request):
-        # Annotate so the Followers column sorts correctly and skips a per-row query.
+        # Annotate so the Followers column is sortable and avoids a query per row.
         return super().get_queryset(request).annotate(
             _total_followers=Sum("social_accounts__followers")
         )
@@ -133,7 +133,6 @@ class CampaignAdmin(admin.ModelAdmin):
                 messages.WARNING,
             )
 
-    # Reviewers get a read-only campaign view; only managers/admins edit.
     def has_add_permission(self, request):
         return request.user.is_superuser or request.user.is_manager
 
@@ -193,14 +192,12 @@ class ParticipationAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         ro = list(super().get_readonly_fields(request, obj))
-        # Reviewers may triage up to approval but never touch money or payment state.
         if not request.user.can_manage_payments:
             ro += ["agreed_fee"]
         return ro
 
     def formfield_for_choice_field(self, db_field, request, **kwargs):
-        # Reviewers triage bookings but can't pay: drop "Paid" from the choices
-        # they can pick so the edit form can't do what the action won't.
+        # Reviewers can't pay, so don't let them pick "Paid" on the form either.
         if db_field.name == "status" and not request.user.can_manage_payments:
             kwargs["choices"] = [
                 c for c in Participation.Status.choices if c[0] != Participation.Status.PAID

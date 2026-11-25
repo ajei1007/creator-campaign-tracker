@@ -106,7 +106,7 @@ class SocialAccount(models.Model):
 
     @property
     def engagement_rate(self):
-        """Engagements per follower as a percentage. The headline metric brands buy on."""
+        """Likes + comments as a percentage of followers."""
         if not self.followers:
             return Decimal("0.00")
         rate = (self.avg_likes + self.avg_comments) / self.followers * 100
@@ -163,7 +163,7 @@ class Campaign(models.Model):
 
     @property
     def committed_spend(self):
-        """Fees owed to everyone still in the funnel (accepted and beyond)."""
+        """Total fees for everyone accepted or further along."""
         active = self.participations.exclude(
             status__in=[
                 Participation.Status.INVITED,
@@ -198,15 +198,12 @@ class Campaign(models.Model):
 
 
 class Participation(models.Model):
-    """A creator's booking on a campaign. Carries the status workflow and money.
-
-    Legal transitions:
-        invited   -> accepted | declined
-        accepted  -> submitted
-        submitted -> approved | rejected
-        rejected  -> submitted      (creator reworks and resubmits)
-        approved  -> paid
-    """
+    # A creator's booking on a campaign. Allowed status moves:
+    #   invited   -> accepted | declined
+    #   accepted  -> submitted
+    #   submitted -> approved | rejected
+    #   rejected  -> submitted   (rework and resubmit)
+    #   approved  -> paid
 
     class Status(models.TextChoices):
         INVITED = "invited", "Invited"

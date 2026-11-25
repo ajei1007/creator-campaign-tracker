@@ -1,9 +1,5 @@
-"""Maps the three roles onto Django groups + model permissions.
-
-The admin enforces these permissions automatically, so a Reviewer who lacks
-`add_campaign` simply never sees the "Add" button. Called from the seed command
-and safe to re-run.
-"""
+# Sets up the Manager and Reviewer groups with their permissions. Run from the
+# seed command, and safe to run again.
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
@@ -26,8 +22,7 @@ def sync_role_groups():
         manager_perms += _perms(model, ["add", "change", "view", "delete"])
     manager.permissions.set(manager_perms)
 
-    # Reviewers can see everything and triage participations, but cannot create
-    # campaigns/creators or delete anything.
+    # Reviewers can view everything and change participations, nothing else.
     reviewer_perms = []
     for model in ("campaign", "creator", "socialaccount", "participation"):
         reviewer_perms += _perms(model, ["view"])

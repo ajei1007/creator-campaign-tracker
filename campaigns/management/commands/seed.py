@@ -25,8 +25,7 @@ User = get_user_model()
 
 DEMO_PASSWORD = "demo-pass-1234"
 
-# A curated set of target markets rather than Faker's full country list, so the
-# admin's country filter stays a short, usable dropdown instead of 50+ rows.
+# Fixed list instead of fake.country() so the country filter stays short.
 COUNTRIES = [
     "United States", "United Kingdom", "Canada", "Germany", "France",
     "Brazil", "India", "Australia", "Japan", "Mexico",

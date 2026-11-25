@@ -86,7 +86,7 @@ if not DATABASES["default"].get("OPTIONS") and DATABASES["default"]["ENGINE"].en
     DATABASES["default"]["CONN_MAX_AGE"] = 60
 
 
-# Argon2 first so new passwords use it; the others stay for verifying legacy hashes.
+# Argon2 for new passwords; the rest stay for verifying old hashes.
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
@@ -142,8 +142,7 @@ else:
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# In production we never want to silently run on the dev SQLite file or the
-# local disk; fail loudly if the managed services weren't wired up.
+# Don't let production silently fall back to SQLite or local disk.
 if not DEBUG:
     if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
         raise ImproperlyConfigured(
@@ -156,7 +155,7 @@ if not DEBUG:
             "is off; refusing to store uploads on local disk."
         )
 
-# Security hardening applied only when DEBUG is off (i.e. in production).
+# Production-only security settings.
 if not DEBUG:
     SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

@@ -1,9 +1,6 @@
-"""Builds grounding context for the help assistant from the actual models.
-
-Everything the model is told about a form comes from the Django field
-definitions themselves (verbose names, help_text, choices, required-ness), so
-answers describe the real schema rather than a guess.
-"""
+# Builds the field reference we feed the assistant, straight from the model
+# fields (verbose name, help_text, choices, required), so it answers from the
+# real schema instead of guessing.
 from django.apps import apps
 
 DOCUMENTED_MODELS = [
@@ -41,7 +38,7 @@ def model_context(model):
 
 
 def build_context(model_key=None):
-    """Return field docs. If model_key is given, scope to that one form."""
+    """Field docs for all models, or just one if model_key is given."""
     targets = DOCUMENTED_MODELS
     if model_key:
         targets = [(a, m) for (a, m) in DOCUMENTED_MODELS if m.lower() == model_key.lower()]

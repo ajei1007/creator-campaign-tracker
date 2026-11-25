@@ -1,172 +1,166 @@
 # Creator Campaign Tracker
 
-An admin-first tool for running influencer marketing campaigns: a brand books
-creators onto a campaign, tracks each booking through a status workflow from
-invite to payout, and stays inside a fixed budget and creator cap. Built on
-Django's admin, backed by managed Postgres and S3-compatible object storage,
-with a Groq-powered help assistant embedded in the admin.
+A small tool for running influencer campaigns. A brand books creators onto a
+campaign, each booking moves through a status workflow from invite to payout, and
+the campaign has to stay inside its budget and creator cap. It's built on Django's
+admin, with Postgres and file storage on Neon and a Groq-backed help assistant in
+the admin.
 
-- **Live URL:** https://creator-campaign-admin.onrender.com — `/admin/` for staff, `/accounts/login/` for everyone
-- **Demo logins** (seeded): `admin_demo`, `manager_demo`, `reviewer_demo` — password `demo-pass-1234`
+- **Live URL:** https://creator-campaign-admin.onrender.com (`/admin/` for staff, `/accounts/login/` for everyone else)
+- **Demo logins:** `admin_demo`, `manager_demo`, `reviewer_demo`, password `demo-pass-1234`
 
-> Hosted on Render's free tier, so the first request after an idle period cold-starts (~50s). Database is Neon Postgres; uploads go to Neon Object Storage; the assistant runs on Groq.
+It's on Render's free tier, so the first request after it's been idle takes ~30-60s
+to wake up.
 
-## Why this domain
+## The domain
 
-The take-home offered three stock domains. I picked a close cousin of the actual
-job — influencer campaign management — because it carries the same shape the brief
-asks for (a many-to-many with real attributes on the join, a status workflow, a
-file upload) while mirroring the day-to-day of the role. It is deliberately the
-same size as the suggested domains, not larger.
+I went with influencer campaign management instead of one of the three suggested
+domains because it's the same size and shape but closer to the actual job. It still
+has everything the brief asks for: a many-to-many with real fields on the join
+table, a status workflow, and a file upload.
 
-The four models:
+Four models:
 
-| Model | Role | Notable relationships |
-|-------|------|-----------------------|
-| `Creator` | An influencer | has many `SocialAccount`; optional one-to-one to a portal `User` |
-| `SocialAccount` | One platform presence | **FK** to `Creator`; computed `engagement_rate` |
-| `Campaign` | A brand's booking round | **M2M** to `Creator` *through* `Participation`; `banner` image |
-| `Participation` | One creator's booking | FK to both; the status workflow, money, and `deliverable` file live here |
+| Model | What it is | Relationships |
+|-------|------------|---------------|
+| `Creator` | An influencer | has many `SocialAccount`; optional link to a portal `User` |
+| `SocialAccount` | One platform account | FK to `Creator`; computed `engagement_rate` |
+| `Campaign` | A brand's campaign | M2M to `Creator` through `Participation`; banner image |
+| `Participation` | One creator on one campaign | FK to both; holds the status workflow, the fee, and a deliverable file |
 
-## Why this stack
+## Why Django
 
-- **Django 5 + the built-in admin.** The brief is essentially a list of things
-  Django's admin does well: generated admin, `list_filter`/`search_fields`,
-  inlines, custom actions, permissions that gate the UI, `help_text` on fields.
-  Choosing Django means the evaluated surface is real framework customization,
-  not a hand-rolled CRUD UI. The job also lists Python and PostgreSQL directly.
-- **PostgreSQL on a managed host (Neon).** Relational data with real foreign
-  keys and aggregate queries (budget sums, follower totals). SQLite is used for
-  local dev only; production uses `DATABASE_URL` and never falls back to a file.
-- **Neon Object Storage for uploads** via `django-storages` — S3-compatible and
-  on the same Neon account as the database, so one provider covers both. The
-  backend is plain S3, so switching to R2/S3/Supabase is just env vars
-  (`AWS_S3_ENDPOINT_URL`, `AWS_S3_ADDRESSING_STYLE`).
-- **WhiteNoise** for hashed, compressed static files, so no separate CDN is
-  needed for the admin's CSS/JS.
-- **Groq** for the assistant — free tier, OpenAI-compatible, fast. The client is
-  a thin `httpx` wrapper, so pointing at any OpenAI-compatible endpoint is a
-  config change.
-- **Argon2** as the password hasher.
+The brief is basically a list of things Django's admin already does well: a
+generated admin, list filters and search, inlines, custom actions, permissions
+that actually gate the UI, help_text on fields. Using Django means what gets
+reviewed is real admin customization instead of a CRUD UI I hand-built. Python and
+Postgres are also both in the job description.
+
+The rest:
+
+- **Postgres on Neon** for the real relationships and the aggregate queries (budget
+  totals, follower counts). SQLite is only for local dev; production reads
+  `DATABASE_URL` and refuses to boot on SQLite.
+- **Neon Object Storage** for uploads, through django-storages. It's S3-compatible
+  and lives on the same Neon account as the database, so one provider covers both.
+  It's a plain S3 backend, so moving to R2 or S3 is just env vars.
+- **WhiteNoise** for static files so I don't need a separate CDN for the admin assets.
+- **Groq** for the assistant: free, OpenAI-compatible, fast. The client is a thin
+  httpx wrapper around the chat endpoint.
+- **Argon2** for password hashing.
 
 ## Business logic
 
-The core rule lives on `Participation` (in the model, not a view):
+The real logic sits on `Participation`, in the model rather than a view:
 
-- **Status workflow** `invited -> accepted -> submitted -> approved -> paid`, with
-  `declined` and `rejected` branches. Illegal jumps (e.g. `invited -> paid`) are
-  rejected in `clean()`; `rejected -> submitted` allows a rework loop; `declined`
-  and `paid` are terminal. Stage timestamps are stamped automatically on save.
-- **Budget guard** — committed fees across a campaign can't exceed its budget.
-- **Capacity guard** — active bookings can't exceed `max_creators`.
-- **Payment guard** — a creator can't be marked `paid` with a zero fee, and only
-  Admin/Manager roles can run the "mark paid" action.
-- **Computed fields** — `SocialAccount.engagement_rate`,
-  `Campaign.committed_spend` / `budget_remaining` / `is_over_budget`.
+- The status workflow is `invited -> accepted -> submitted -> approved -> paid`,
+  plus `declined` and `rejected` branches. Illegal jumps like `invited -> paid` are
+  rejected in `clean()`. `rejected -> submitted` lets a creator rework and resubmit.
+  `declined` and `paid` are terminal. Timestamps for each stage are set on save.
+- Committed fees across a campaign can't go over its budget.
+- Active bookings can't go over `max_creators`.
+- You can't mark someone paid with a zero fee, and only Admin/Manager can run the
+  pay action.
+- Computed fields: `engagement_rate` on an account, and `committed_spend`,
+  `budget_remaining`, `is_over_budget` on a campaign.
 
-Covered by 12 tests in `campaigns/tests.py` (`python manage.py test`).
+There are 14 tests in `campaigns/tests.py` covering the transitions, the budget and
+capacity rules, the payment gate, and the engagement calc. Run them with
+`python manage.py test`.
 
 ## Roles
 
-Three roles, enforced through Django groups/permissions (which the admin honours
-automatically) plus a few explicit gates. A lower role sees a *visibly* smaller
-admin, not just blocked POSTs.
+Three roles. Permissions come from Django groups, which the admin respects on its
+own, plus a few explicit checks. A lower role sees a smaller admin, not just a
+blocked request.
 
-| Capability | Admin | Manager | Reviewer |
+| | Admin | Manager | Reviewer |
 |---|:---:|:---:|:---:|
 | Campaigns / creators: add, edit, delete | yes | add + edit | view only |
-| Participations: triage status | yes | yes | yes |
-| Edit `agreed_fee` / run "mark paid" | yes | yes | no |
+| Participations: change status | yes | yes | yes |
+| Edit fee / mark paid | yes | yes | no |
 | Manage users | yes | no | no |
 
-The Reviewer has no "Add campaign" button and gets a 403 on the add URL; the
-`agreed_fee` field renders read-only for them; the "mark paid" action is absent
-from their action dropdown. (Verified end-to-end during development.)
+As a Reviewer there's no "Add campaign" button, the add URL returns 403, the
+`agreed_fee` field is read-only, "Paid" isn't in the status dropdown, and the mark
+paid action isn't in the list.
 
 ## Security
 
-- Passwords hashed with **Argon2** (`PASSWORD_HASHERS`).
-- **CSRF** on all state-changing requests, including the assistant endpoint
-  (the widget sends the token header).
-- **Upload validation** — type + size (5 MB) on images and deliverables; the AI
-  chat input is length-capped and server-validated.
-- **No secrets in the repo** — everything is read from env via `django-environ`;
-  `.env` is gitignored and `.env.example` documents the keys.
-- **Production hardening** when `DEBUG=False`: SSL redirect, HSTS, secure +
-  HTTP-only cookies, `nosniff`, `X-Frame-Options: DENY`, 8-hour session expiry.
-- `python manage.py check --deploy` is clean.
+- Passwords hashed with Argon2.
+- CSRF on everything that changes state, including the assistant endpoint.
+- Upload validation: file type and 5 MB size limit on images and deliverables, and
+  the chat input is length-capped and validated server-side.
+- No secrets in the repo. Everything comes from env vars; `.env` is gitignored and
+  `.env.example` lists the keys.
+- With `DEBUG=False`: SSL redirect, HSTS, secure and HTTP-only cookies, nosniff,
+  `X-Frame-Options: DENY`, and an 8-hour session. `manage.py check --deploy` is clean.
 
-## AI help assistant
+## The help assistant
 
-A chat bubble in the admin answers "what does this field mean / how do I fill
-this out". It is **grounded**: `assistant/context.py` introspects the live model
-fields — verbose names, `help_text`, choices, required-ness — and feeds only that
-into the system prompt, scoped to whichever model the admin page is editing. The
-model is told to answer from the reference or admit it doesn't know. If the API
-key is missing, the call times out, or the provider errors, the widget shows a
-plain message and the admin keeps working — the assistant never takes the page
-down. Input is length-capped and the API key is a secret, never logged.
+There's a chat bubble in the admin that answers "what does this field mean / how do
+I fill this out". It's grounded: `assistant/context.py` reads the actual model
+fields (verbose name, help_text, choices, required) and that's all that goes into
+the prompt, scoped to whichever model you're editing. The prompt tells the model to
+answer from that reference or say it doesn't know. If the key is missing, the call
+times out, or the API errors, the widget shows a short message and the admin keeps
+working. The input is length-capped and the key is only ever an env var.
 
 ## Running locally
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # then set SECRET_KEY; defaults use SQLite + no S3
+cp .env.example .env      # set SECRET_KEY; defaults use SQLite and local file storage
 python manage.py migrate
-python manage.py seed         # demo users + realistic data
+python manage.py seed
 python manage.py runserver
 ```
 
-Visit `http://127.0.0.1:8000/admin/` and sign in with a demo login above. To try
-the assistant locally, put a free Groq key in `.env` as `GROQ_API_KEY`.
+Then open `http://127.0.0.1:8000/admin/` and log in with one of the demo users. For
+the assistant to work locally, add a Groq key as `GROQ_API_KEY` in `.env`.
 
-Reset the data at any time with `python manage.py seed` (add `--creators N
---campaigns N` to change the scale).
+Re-run `python manage.py seed` any time to reset the data (`--creators N` and
+`--campaigns N` change the scale).
 
-## Deployment (Render + Neon database + Neon Object Storage)
+## Deploying
 
-The repo deploys as a Render Blueprint (`render.yaml`).
+It deploys as a Render Blueprint (`render.yaml`):
 
-1. Create a Neon project. Use its pooled `DATABASE_URL`, and in the same project
-   enable **Object Storage**, create a public-read bucket, and generate an S3
-   credential (`storage:write`).
-2. On Render: **New → Blueprint**, point at this repo. Render reads `render.yaml`
-   and prompts for the secret env vars: `DATABASE_URL`, the `AWS_*` storage
-   values, `AWS_S3_CUSTOM_DOMAIN` (`<endpoint-host>/<bucket>`), `GROQ_API_KEY`,
-   and the host in `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS`. `DEBUG=False`,
-   `USE_S3=True`, region, and path-style addressing are set by the blueprint.
-3. `build.sh` runs `collectstatic` and `migrate`. Seed once with
-   `python manage.py seed` (locally against the Neon `DATABASE_URL`, or from a
-   Render shell) to create the demo data and logins.
+1. Create a Neon project. Use the pooled `DATABASE_URL`, and in the same project
+   turn on Object Storage, make a public-read bucket, and create an S3 credential.
+2. On Render pick New -> Blueprint and point it at the repo. It reads `render.yaml`
+   and asks for the secret env vars: `DATABASE_URL`, the `AWS_*` storage values,
+   `AWS_S3_CUSTOM_DOMAIN` (`<endpoint-host>/<bucket>`), `GROQ_API_KEY`, and the host
+   for `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS`. `DEBUG=False`, `USE_S3=True`, the
+   region, and path-style addressing come from the blueprint.
+3. `build.sh` runs collectstatic and migrate on deploy. Run `python manage.py seed`
+   once against the Neon database to create the demo data.
 
-Static files are served by WhiteNoise; uploads go straight to Neon Object
-Storage (path-style S3), never to the instance disk.
+Static files go through WhiteNoise; uploads go straight to Neon storage, never the
+instance disk.
 
-## What I deliberately skipped, and why
+## What I left out
 
-- **OAuth login (bonus).** Local auth already satisfies "real authentication".
-  Google/GitHub OAuth drops in via `django-allauth`, but it adds a provider
-  dependency and a "what role does a new OAuth user get" policy question I didn't
-  want to answer casually for a demo. Noted as the first thing I'd add.
-- **A full creator-facing portal.** The job describes a dual-sided product; this
-  task grades the admin. I built a minimal read-only portal (a creator sees their
-  own campaigns and earnings) to show the seam, and stopped there rather than
-  reimplementing campaign management for creators.
-- **Live metric scraping.** The job mentions scraping Instagram/YouTube/etc. The
-  schema models the *output* of that (per-account follower/engagement metrics
-  with a `last_synced` stamp), but the ingestion pipeline is out of scope for a
-  take-home and would be a separate worker service.
-- **Conversation memory in the assistant.** Each question is answered
-  independently against the field context. Multi-turn memory wasn't worth the
-  state for a field-help tool.
+- **OAuth.** Local auth already covers "real authentication". OAuth is easy to add
+  with django-allauth, but it brings a provider dependency and the question of what
+  role a brand-new OAuth user should get, which I didn't want to hand-wave for a
+  demo. It'd be the first thing I add.
+- **A full creator portal.** The job is a two-sided product but this task is about
+  the admin, so I built a small read-only portal (a creator can see their own
+  campaigns and earnings) to show the seam and left it there.
+- **Metric scraping.** The job mentions scraping the platforms. I modelled the
+  output of that (per-account follower/engagement numbers with a `last_synced`
+  field) but the scraping itself is a separate service, out of scope here.
+- **Chat history.** Each question is answered on its own against the field context.
+  Multi-turn memory wasn't worth it for a field-help tool.
 
-## What I'd do differently with more time
+## With more time
 
-- Add OAuth with an explicit, safe default role (Reviewer) for new users.
-- Move the budget/capacity checks into a `select_for_update` transaction so two
-  concurrent bookings can't both pass the Python-level check.
-- A model-level transition API (django-fsm style) instead of hand-checking the
-  transition map in `clean()`.
-- Signed, time-limited URLs for private deliverables instead of public-read.
-- Thumbnails for avatars/banners generated on upload.
+- OAuth with a safe default role (Reviewer) for new sign-ups.
+- Put the budget and capacity checks in a `select_for_update` transaction so two
+  bookings at once can't both slip past the Python check.
+- A proper transition API (something like django-fsm) instead of the hand-written
+  map in `clean()`.
+- Signed, expiring URLs for private deliverables instead of public-read.
+- Generating thumbnails for avatars and banners on upload.

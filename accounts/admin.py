@@ -18,5 +18,5 @@ class UserAdmin(BaseUserAdmin):
     )
 
     def has_module_permission(self, request):
-        # Only admins manage other users; managers and reviewers never see this.
+        # Only admins get the user management section.
         return request.user.is_superuser or getattr(request.user, "role", None) == Role.ADMIN

@@ -9,13 +9,8 @@ class Role(models.TextChoices):
 
 
 class User(AbstractUser):
-    """Staff user of the admin. The role drives what the admin exposes.
-
-    Django groups/permissions remain the real enforcement layer the admin
-    honours automatically; role is the high-level label we gate custom
-    behaviour on (custom actions, read-only fields, the portal).
-    """
-
+    # Permissions still come from Django groups; role is just the label we use
+    # for the extra gates (custom actions, read-only fields, the portal).
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
